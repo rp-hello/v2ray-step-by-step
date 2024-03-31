@@ -6,47 +6,31 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v4
     - name: Use Node.js
-      uses: actions/setup-node@v1
+      uses: actions/setup-node@v4
       with:
-        node-version: 12.x
-
-    - name: fiddling with branches
-      run: |
-        git fetch origin transifex --progress
-        git fetch origin dev --progress
-        git checkout -b transifex remotes/origin/transifex
-        git archive --format tar --output /tmp/transifex.tar HEAD
-        git checkout -b dev remotes/origin/dev
-        tar xf /tmp/transifex.tar
-        npm install -g lint-md-cli
-        echo '{' > .lintmdrc
-        echo '    "rules": {' >> .lintmdrc
-        echo '        "no-empty-code-lang": 0,' >> .lintmdrc
-        echo '        "no-long-code": 0' >> .lintmdrc
-        echo '    }' >> .lintmdrc
-        echo '}' >> .lintmdrc
-        for MARKDOWN in $(find zh_CN/ -name "*.md"); do lint-md $MARKDOWN; done
-        cp -rv zh_CN/* .
-        rm -rf zh_CN
+        node-version: 20
 
     - name: Install and Build
+      env:
+        NODE_OPTIONS: --openssl-legacy-provider
       run: |
         yarn install
         yarn build
-        
+
     - name: Publish gh-pages
       env:
+        REPO: ${{ github.repository }}
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         cd .vuepress/dist
         echo "guide.v2fly.org" > CNAME
-        git init .
+        git init --initial-branch=gh-pages .
         git config user.name V2FlyContrib
         git config user.email SharedAccount+V2FlyContrib@unial.org
         git config commit.gpgsign false
         git add -A
         git commit -m "GitHub Actions @ $(date -u -Ins)"
-        git remote add origin https://x-access-token:${GITHUB_TOKEN}@github.com/v2fly/v2ray-step-by-step.git
-        git push -f -v --progress origin master:gh-pages
+        git remote add origin https://x-access-token:${GITHUB_TOKEN}@github.com/${REPO}.git
+        git push -f -v --progress origin gh-pages:gh-pages
