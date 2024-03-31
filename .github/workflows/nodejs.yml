@@ -18,6 +18,7 @@ jobs:
     - name: Install and Build
       env:
         NODE_OPTIONS: --openssl-legacy-provider
+        BASE: ${{ vars.BASE }}
       run: |
         yarn install
         yarn build
