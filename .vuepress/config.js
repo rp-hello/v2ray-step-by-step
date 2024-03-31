@@ -167,7 +167,7 @@ function i18nSidebar(locale) {
 }
 
 module.exports = {
-  base: "/v2ray-step-by-step/",
+  base: process.env.BASE || "/",
   title: '新 V2Ray 白话文指南',
   description: 'Just playing around',
   locales: {
