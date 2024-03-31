@@ -26,7 +26,7 @@ V2Ray 内置的 DNS 服务，其解析的 IP 往往先是用来匹配路由规�
 }
 ```
 
-DNS 模块的基础使用并没有什么特别复杂的地方，就是指定一个或几个 DNS 服务器，v2ray 会依次使用（查询失败时候会查询下一个）。其中"localhost"的意义是特殊的，作用是本地程序用系统的 DNS 去发请求，而不是 V2ray 直接跟 DNS 服务器通信，这个通信不收 Routing 等模块的控制。
+DNS 模块的基础使用并没有什么特别复杂的地方，就是指定一个或几个 DNS 服务器，v2ray 会依次使用（查询失败时候会查询下一个）。其中"localhost"的意义是特殊的，作用是本地程序用系统的 DNS 去发请求，而不是 V2ray 直接跟 DNS 服务器通信，这个通信不受 Routing 等模块的控制。
 
 ## 进阶配置
 
@@ -150,14 +150,14 @@ Kitsunebi 的作者在 [《漫谈各种黑科技式 DNS 技术在代理环境中
 }
 ```
 
-2. 在`dns-in`中设置其它可靠的 DNS 服务器。例如，仅利用 v2ray 内置 DNS 实现 DNS 分流，而解析则使用`dnscrypt-proxy`实现。
+2. 在 `dns-in` 中设置其它可靠的 DNS 服务器。例如，仅利用 v2ray 内置 DNS 实现 DNS 分流，而解析则使用 `dnscrypt-proxy` 实现。
 
-如果非`Type A`和`Type AAAA`的 DNS 查询需求较少，可以无视上述改进。
+如果非 `Type A` 和 `Type AAAA` 的 DNS 查询需求较少，可以无视上述改进。
 
 
 ## DNS over HTTPS
 
-V2Ray 4.22.0 新加入的功能，也没特殊配置的地方，就是上述配置里面的 DNS 地址写成 DOH 服务地址。~~~一般只在服务端使用`https+local`模式，而墙内目前似乎没有稳定的 DOH 提供商，只有`1.1.1.1`一家可用，而且效果并不稳定~~~在中国大陆可以使用阿里云 DNS 提供的 DoH 服务解析境内域名：`https://dns.alidns.com/dns-query`或`https://223.5.5.5/dns-query`。
+V2Ray 4.22.0 新加入的功能，也没特殊配置的地方，就是上述配置里面的 DNS 地址写成 DOH 服务地址。~~一般只在服务端使用 `https+local` 模式，而墙内目前似乎没有稳定的 DOH 提供商，只有 `1.1.1.1` 一家可用，而且效果并不稳定~~ 在中国大陆可以使用阿里云 DNS 提供的 DoH 服务解析境内域名：`https://dns.alidns.com/dns-query` 或 `https://223.5.5.5/dns-query`。
 
 ```json
 {
@@ -172,12 +172,12 @@ V2Ray 4.22.0 新加入的功能，也没特殊配置的地方，就是上述配�
 
 DOH 服务商不像传统 DNS 那么成熟，目前网上提供 DOH 的服务商可以参考 [curl - DNS over HTTPS](https://github.com/curl/curl/wiki/DNS-over-HTTPS)
 
-注意，多数服务商的 DOH 的 tls 证书是没有对 IP 地址签发认证的，必须写实际的域名，但也有一些 DoH 提供商可以直接使用 IP 作为主机名访问，例如 CloudFlare 的`1.1.1.1`和阿里云公共 DNS 的`223.5.5.5`。
+注意，多数服务商的 DOH 的 tls 证书是没有对 IP 地址签发认证的，必须写实际的域名，但也有一些 DoH 提供商可以直接使用 IP 作为主机名访问，例如 CloudFlare 的 `1.1.1.1` 和阿里云公共 DNS 的 `223.5.5.5`。
 
 DOH 把 DNS 请求融入到常见的 https 流量当中，完全使用 DOH 可以避免出入口 ISP 知道你访问的域名。
 但需要注意，只有在客户端、服务端都使用 DOH 协议（客户端使用 https 模式，服务端使用 https+local 模式）时候，VPS 出口上才不会出现传统的 UDP DNS 请求。
 
-DOH 的解析时间比传统的 UDP 要高不少，把 V2Ray 的 log level 设置为 debug 可以看到具体的域名解析耗时值。
+DOH 的解析时间比传统的 UDP 要高不少，把 V2Ray 的 log level 设置为 info 可以看到具体的域名解析耗时值。
 
 ```plain
 2019/11/28 17:34:55 [Info] v2ray.com/core/app/dns: UDP:1.1.1.1:53 got answere: www.msn.com. TypeA -> [204.79.197.203] 8.9953ms
@@ -234,7 +234,7 @@ DOH 的解析时间比传统的 UDP 要高不少，把 V2Ray 的 log level 设�
 
 其中“终结 DNS”可交给操作系统处理（freedom 的`domainStrategy`:`AsIs`），也可使用内置 DNS 的结果。
 
-而“匹配 DNS”都由内置 DNS 处理。“匹配 DNS”在整个代理过程中并不是必不可少的，当使用 routing 的"domainStrategy":AsIs 时，甚至不会使用“匹配 DNS”功能；即使是其他模式，也只影响效率：如果内置 DNS 配置不正确，每个请求都会询问一次错误的“匹配 DNS”，直至超时后才转发，但整个转发过程数据是正常的。
+而“匹配 DNS”都由内置 DNS 处理。“匹配 DNS”在整个代理过程中并不是必不可少的，当使用 routing 的 "domainStrategy":AsIs 时，甚至不会使用“匹配 DNS”功能；即使是其他模式，也只影响效率：如果内置 DNS 配置不正确，每个请求都会询问一次错误的“匹配 DNS”，直至超时后才转发，但整个转发过程数据是正常的。
 
 
 

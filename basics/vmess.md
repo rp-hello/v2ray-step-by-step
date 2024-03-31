@@ -35,15 +35,17 @@ $ jq . config.json
 
 不过，最好还是使用 V2Ray 提供的配置检查功能（test 选项），因为可以检查 JSON 语法错误外的问题，比如说突然间手抖把 vmess 写成了 vmss，一下子就检查出来了。
 ```plain
-$ /usr/bin/v2ray/v2ray -test -config /etc/v2ray/config.json
+$ /usr/local/bin/v2ray -test -config /usr/local/etc/v2ray/config.json
+
 failed to parse json config: Ext|Tools|Conf|Serial: failed to parse json config > Ext|Tools|Conf: failed to load inbound detour config. > Ext|Tools|Conf: unknown config id: vmss
-Main: failed to read config file: /etc/v2ray/config.json > Main|Json: failed to execute v2ctl to convert config file. > exit status 255
+Main: failed to read config file: /usr/local/etc/v2ray/config.json > Main|Json: failed to execute v2ctl to convert config file. > exit status 255
 ```
 
 如果是配置文件没问题，则是这样的：
 
 ```plain
-$ /usr/bin/v2ray/v2ray -test -config /etc/v2ray/config.json
+$ /usr/local/bin/v2ray -test -config /usr/local/etc/v2ray/config.json
+
 V2Ray v3.15 (die Commanderin) 20180329
 An unified platform for anti-censorship.
 Configuration OK.
@@ -86,7 +88,7 @@ VMess 协议的认证基于时间，一定要保证服务器和客户端的系�
             "users": [
               {
                 "id": "b831381d-6324-4d53-ad4f-8cda48b30811",  // 用户 ID，必须与服务器端配置相同
-                "alterId": 64 // 此处的值也应当与服务器相同
+                "alterId": 0 // 此处的值也应当与服务器相同
               }
             ]
           }
@@ -105,7 +107,7 @@ VMess 协议的认证基于时间，一定要保证服务器和客户端的系�
 
 ### 服务器配置
 
-以下是服务器配置，将服务器 /etc/v2ray 目录下的 config.json 文件修改成下面的内容，修改完成后要重启 V2Ray 才会使修改的配置生效。
+以下是服务器配置，将服务器 /usr/local/etc/v2ray 目录下的 config.json 文件修改成下面的内容，修改完成后要重启 V2Ray 才会使修改的配置生效。
 ```json
 {
   "inbounds": [
@@ -116,7 +118,7 @@ VMess 协议的认证基于时间，一定要保证服务器和客户端的系�
         "clients": [
           {
             "id": "b831381d-6324-4d53-ad4f-8cda48b30811",  // 用户 ID，客户端与服务器必须相同
-            "alterId": 64
+            "alterId": 0
           }
         ]
       }
@@ -141,7 +143,7 @@ VMess 协议的认证基于时间，一定要保证服务器和客户端的系�
 
 客户端配置中的 inbounds，port 为 1080，即 V2Ray 监听了一个端口 1080，协议是 socks。之前我们已经把浏览器的代理设置好了（SOCKS Host: 127.0.0.1，Port: 1080），假如访问了 google.com，浏览器就会发出一个数据包打包成 socks 协议发送到本机（127.0.0.1 指的本机，localhost）的 1080 端口，这个时候数据包就会被 V2Ray 接收到。
 
-再看 outbounds，protocol 是 vmess，说明 V2Ray 接收到数据包之后要将数据包打包成 [VMess](https://www.v2ray.com/developer/protocols/vmess.html) 协议并且使用预设的 id 加密（这个例子 id 是 b831381d-6324-4d53-ad4f-8cda48b30811），然后发往服务器地址为 serveraddr.com 的 16823 端口。服务器地址 address 可以是域名也可以是 IP，只要正确就可以了。
+再看 outbounds，protocol 是 vmess，说明 V2Ray 接收到数据包之后要将数据包打包成 [VMess](https://www.v2fly.org/developer/protocols/vmess.html) 协议并且使用预设的 id 加密（这个例子 id 是 b831381d-6324-4d53-ad4f-8cda48b30811），然后发往服务器地址为 serveraddr.com 的 16823 端口。服务器地址 address 可以是域名也可以是 IP，只要正确就可以了。
 
 
 在客户端配置的 inbounds 中，有一个 `"sniffing"` 字段，V2Ray 手册解释为“流量探测，根据指定的流量类型，重置所请求的目标”，这话不太好理解，简单说这东西就是从网络流量中识别出域名。这个 sniffing 有两个用处：
@@ -161,7 +163,7 @@ VMess 协议的认证基于时间，一定要保证服务器和客户端的系�
 {浏览器} <--(socks)--> {V2Ray 客户端 inbound <-> V2Ray 客户端 outbound} <--(VMess)-->  {V2Ray 服务器 inbound <-> V2Ray 服务器 outbound} <--(Freedom)--> {目标网站}
 ```
 
-配置中还有一个 alterId 参数，这个参数主要是为了加强防探测能力。理论上 alterId 越大越好，但越大就约占内存(只针对服务器，客户端不占内存)，所以折中之下设一个中间值才是最好的。那么设多大才是最好的？其实这个是分场景的，我没有严格测试过这个，不过根据经验，alterId 的值设为 30 到 100 之间应该是比较合适的。alterId 的大小要保证客户端的小于等于服务器的。
+配置中还有一个 alterId 参数，在之前的版本中建议设置为 30 到 100 之间，在 v4.28.1 版本之后必须设置为 0 以启用 VMessAEAD 。
 
 有人疑惑请求发出去后数据怎么回来，毕竟大多数的场景是下载。这个其实不算是问题，既然请求通过 V2Ray 发出去了，响应数据也会通过 V2Ray 原路返回（也许会有朋友看到这话会马上反驳说不一定是原路返回的，有这种想法的估计是非常了解 TCP/IP 协议的，何必较这个劲，这是底层的东西，又掌控在运营商手里，从应用层理解原路返回又有何不可）。
 
@@ -169,9 +171,9 @@ VMess 协议的认证基于时间，一定要保证服务器和客户端的系�
 
 ## 注意事项
 
-- 为了让浅显地介绍 V2Ray 的工作方式，本节中关于原理简析的描述有一些地方是错误的。但我知识水平又不够，还不知道该怎么改，暂且将错就错。正确的工作原理在用户手册的 [VMess 协议](https://www.v2ray.com/developer/protocols/vmess.html) 有详细的说明。
+- 为了让浅显地介绍 V2Ray 的工作方式，本节中关于原理简析的描述有一些地方是错误的。但我知识水平又不够，还不知道该怎么改，暂且将错就错。正确的工作原理在用户手册的 [VMess 协议](https://www.v2fly.org/developer/protocols/vmess.html) 有详细的说明。
 - id 为 UUID 格式，请使用软件生成，不要尝试自己造一个，否则很大程度上造出一个错误的格式来。
-- VMess 协议可以设定加密方式，但 VMess 不同的加密方式对于过墙没有明显差别，本节没有给出相关配置方式（因为这不重要，默认情况下 VMess 会自己选择一种比较合适的加密方式），具体配置可见 [V2Ray 手册](https://v2ray.com/chapter_02/protocols/vmess.html)，不同加密方式的性能可参考[性能测试](/app/benchmark.md)。
+- VMess 协议可以设定加密方式，但 VMess 不同的加密方式对于过墙没有明显差别，本节没有给出相关配置方式（因为这不重要，默认情况下 VMess 会自己选择一种比较合适的加密方式），具体配置可见 [V2Ray 手册](https://www.v2fly.org/developer/protocols/vmess.html)，不同加密方式的性能可参考[性能测试](/app/benchmark.md)。
 
 -------
 
@@ -209,6 +211,9 @@ VMess 协议的认证基于时间，一定要保证服务器和客户端的系�
 
 修正方法：请校准系统时间或将 id 以及 alterId 修改一致。
 
+#### 执行 `cat /var/log/v2ray/access.log` 出现 rejected  common/drain: common/drain: unable to drain connection > EOF > proxy/vmess/encoding: invalid user
+
+可能原因：服务器与客户端的 alterId 未设置为 0 。
 
 #### 以上几点都排除之后，请仔细检查
 
@@ -231,16 +236,3 @@ VMess 协议的认证基于时间，一定要保证服务器和客户端的系�
  2). 直接放弃；
 
  3). 向大牛请教。
-
------
-
-#### 更新历史
-
-- 2017-08-08 排错指引补充
-- 2017-08-06 添加排错指引
-- 2018-02-09 补充说明
-- 2018-04-05 内容补充
-- 2018-09-03 更进一些 V2Ray 的变化，并修改一些描述
-- 2018-11-09 跟进新 v4.0+ 的配置格式
-- 2018-02-01 domainOverride 改为 sniffing
-- 2019-10-27 sniffing 不再影响 tor 的使用

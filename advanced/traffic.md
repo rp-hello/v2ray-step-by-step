@@ -1,98 +1,104 @@
 # 流量统计
 
-V2Ray 内包含了流量记录器功能，但是默认并不启用。流量统计分两类：`inbound`和`user`。
+V2Ray 内包含了流量记录器功能，但是默认并不启用。流量统计分三类：`inbound`，`user`和`outbound`（4.26.0+）。
 
 * `inbound` 即配置内各个 inbound 的入站的统计，需要根据 `tag` 来记录入站流量。
 * `user` 即 vmess 协议用户里面的统计，用户的 `email` 既是统计和区分的依据。socks, shadowsocks, http 等其他协议内的用户不支持被统计。
+* `outbound` 即配置内各个 outbound 的出站的统计，4.26.0 起新增，需要根据 `tag` 来记录出站流量。
 
 ## 配置统计功能
 
 要实现流量统计功能，配置内需要确保存在以下配置：
 
-1. `"stats":{}` 对象的存在
-2. `"api"` 配置对象里面有 `StatsService`
-3. `"policy"` 中的统计开关为 true，除了各个用户的统计，还有全局统计
-4. clients 里面要有 email
-5. 专用的 `dokodemo-door` 协议的入口，tag 为 api
-6. routing 里面有 inboundTag:api -> outboundTag:api 的规则
+1. `"stats", "api", "policy", "routing"` 对象的存在；
+2. `"policy"` 中的统计开关为 true。全局统计的开关在 `"system"` 下，用户统计的开关在 `"levels"` 下；
+3. 全局统计在相应的入站出站要有 tag；
+4. 用户统计在 `"clients"` 里面要有 email；
 
-注意： 统计的 `email`/`tag` 是当前的 V2Ray 进程实例的数据，比如在服务器上统计，客户端写的 email 对服务器没有意义；如果在客户端统计，输出的就是客户端本身的数据。
+要使用 api 查询流量，配置内需要确保存在以下配置：
+
+1. `"api"` 配置对象里面有 `StatsService`；
+2. 专用的 `dokodemo-door` 协议的入口，tag 为 api；
+3. routing 里面有 inboundTag:api -> outboundTag:api 的规则；
+
+注意： 统计的 `email` / `tag` 是当前的 V2Ray 进程实例的数据，比如在服务器上统计，客户端写的 email 对服务器没有意义；如果在客户端统计，输出的就是客户端本身的数据。
 
 ## 配置实例
 
 ```json
 {
-    "stats": {},
-    "api": {
-        "tag": "api",
-        "services": [
-            "StatsService"
-        ]
+  "stats": {},
+  "api": {
+    "tag": "api",
+    "services": [
+      "StatsService"
+    ]
+  },
+  "policy": {
+    "levels": {
+      "0": {
+        "statsUserUplink": true,
+        "statsUserDownlink": true
+      }
     },
-    "policy": {
-        "levels": {
-            "0": {
-                "statsUserUplink": true,
-                "statsUserDownlink": true
-            }
-        },
-        "system": {
-            "statsInboundUplink": true,
-            "statsInboundDownlink": true
-        }
-    },
-    "inbounds": [
-        {
-            "tag": "tcp",
-            "port": 3307,
-            "protocol": "vmess",
-            "settings": {
-                "clients": [
-                    {
-                        "email": "auser",
-                        "id": "e731f153-4f31-49d3-9e8f-ff8f396135ef",
-                        "level": 0,
-                        "alterId": 64
-                    },
-                    {
-                        "email": "buser",
-                        "id": "e731f153-4f31-49d3-9e8f-ff8f396135ee",
-                        "level": 0,
-                        "alterId": 64
-                    }
-                ]
-            }
-        },
-        {
-            "listen": "127.0.0.1",
-            "port": 10085,
-            "protocol": "dokodemo-door",
-            "settings": {
-                "address": "127.0.0.1"
-            },
-            "tag": "api"
-        }
-    ],
-    "outbounds": [
-        {
-            "protocol": "freedom",
-            "settings": {}
-        }
-    ],
-    "routing": {
-        "settings": {
-            "rules": [
-                {
-                    "inboundTag": [
-                        "api"
-                    ],
-                    "outboundTag": "api",
-                    "type": "field"
-                }
-            ]
-        },
-        "strategy": "rules"
+    "system": {
+      "statsInboundUplink": true,
+      "statsInboundDownlink": true,
+      "statsOutboundUplink": true,
+      "statsOutboundDownlink": true
     }
+  },
+  "inbounds": [
+    {
+      "tag": "tcp",
+      "port": 3307,
+      "protocol": "vmess",
+      "settings": {
+        "clients": [
+          {
+            "email": "userA",
+            "id": "e731f153-4f31-49d3-9e8f-ff8f396135ef",
+            "level": 0,
+            "alterId": 0
+          },
+          {
+            "email": "userB",
+            "id": "e731f153-4f31-49d3-9e8f-ff8f396135ee",
+            "level": 0,
+            "alterId": 0
+          }
+        ]
+      }
+    },
+    {
+      "listen": "127.0.0.1",
+      "port": 10085,
+      "protocol": "dokodemo-door",
+      "settings": {
+        "address": "127.0.0.1"
+      },
+      "tag": "api"
+    }
+  ],
+  "outbounds": [
+    {
+      "tag": "direct",
+      "protocol": "freedom",
+      "settings": {}
+    }
+  ],
+  "routing": {
+    "rules": [
+      {
+        "inboundTag": [
+          "api"
+        ],
+        "outboundTag": "api",
+        "type": "field"
+      }
+    ],
+    "domainStrategy": "AsIs"
+  }
 }
 ```
 
@@ -100,10 +106,20 @@ V2Ray 内包含了流量记录器功能，但是默认并不启用。流量统�
 
 查看流量信息是 `v2ctl` 的其中一个功能。使用 `v2ctl api -h` 可见查询例子。 配置内设置的 api dokodemo-door 端口，即为 `--server` 参数的端口。
 
+可调用的 api 有两个：
+
+* `QueryStats` 用来查询匹配的记录，可以使用参数 `pattern` 和 `reset`；pattern 留空则是匹配所有记录；reset 使匹配的单元数值置零。
+* `GetStats` 用来其中一个的记录，接受 `name` 和 `reset`，name 可参考 QueryStats 的输出结果构建，reset 使该单元数值置零。
+
 ```bash
 v2ctl api --server=127.0.0.1:10085 StatsService.QueryStats 'pattern: "" reset: false'
-v2ctl api --server=127.0.0.1:10085 StatsService.GetStats 'name: "inbound>>>statin>>>traffic>>>downlink" reset: false'
 ```
+
+```bash
+v2ctl api --server=127.0.0.1:10085 StatsService.GetStats 'name: "inbound>>>api>>>traffic>>>downlink" reset: false'
+```
+
+*注：GetStats 参数 name 需做修改，可选值为 QueryStats 的结果。*
 
 注意如果在 Windows 的 CMD 内运行，里面的引号要特别处理：
 
@@ -111,22 +127,10 @@ v2ctl api --server=127.0.0.1:10085 StatsService.GetStats 'name: "inbound>>>stati
 v2ctl.exe api --server="127.0.0.1:10085" StatsService.GetStats "name: """"inbound>>>statin>>>traffic>>>downlink"""" reset: false"
 ```
 
-可调用的 api 有两个：
-
-* `QueryStats`用来查询匹配的记录，可以使用参数`pattern`和`reset`；pattern 留空则是匹配所有记录；reset 使匹配的单元数值置零。
-* `GetStats`用来其中一个的记录，接受`name`和`reset`，name 可参考 QueryStats 的输出结果构建，reset 使该单元数值置零。
-
 输出例子：
 
 ```text
-$ /usr/bin/v2ray/v2ctl api --server=127.0.0.1:10085 StatsService.GetStats 'name:"inbound>>>ws>>>traffic>>>uplink"'
-stat: <
-  name: "inbound>>>ws>>>traffic>>>uplink"
-  value: 3350713
->
-$
-$
-$ /usr/bin/v2ray/v2ctl api --server=127.0.0.1:10085 StatsService.QueryStats ''
+$ /usr/local/bin/v2ctl api --server=127.0.0.1:10085 StatsService.QueryStats ''
 stat: <
   name: "inbound>>>ws>>>traffic>>>uplink"
   value: 3350713
@@ -143,35 +147,12 @@ stat: <
   name: "user>>>u9@ss>>>traffic>>>uplink"
   value: 1776
 >
+...
+$
+$ /usr/local/bin/v2ctl api --server=127.0.0.1:10085 StatsService.GetStats 'name:"inbound>>>ws>>>traffic>>>uplink"'
 stat: <
-  name: "inbound>>>ss>>>traffic>>>uplink"
-  value: 2276
->
-stat: <
-  name: "inbound>>>api>>>traffic>>>uplink"
-  value: 318
->
-stat: <
-  name: "user>>>u9@ss>>>traffic>>>downlink"
-  value: 1368
->
-stat: <
-  name: "inbound>>>tcp>>>traffic>>>uplink"
->
-stat: <
-  name: "inbound>>>tcp>>>traffic>>>downlink"
->
-stat: <
-  name: "inbound>>>ws>>>traffic>>>downlink"
-  value: 130637140
->
-stat: <
-  name: "inbound>>>api>>>traffic>>>downlink"
-  value: 759
->
-stat: <
-  name: "user>>>u3@ws>>>traffic>>>downlink"
-  value: 126944108
+  name: "inbound>>>ws>>>traffic>>>uplink"
+  value: 3350713
 >
 ```
 
@@ -187,7 +168,7 @@ stat: <
 #!/bin/bash
 
 _APISERVER=127.0.0.1:10085
-_V2CTL=/usr/bin/v2ray/v2ctl
+_V2CTL=/usr/local/bin/v2ctl
 
 apidata () {
     local ARGS=
@@ -225,6 +206,9 @@ DATA=$(apidata $1)
 echo "------------Inbound----------"
 print_sum "$DATA" "inbound"
 echo "-----------------------------"
+echo "------------Outbound----------"
+print_sum "$DATA" "outbound"
+echo "-----------------------------"
 echo
 echo "-------------User------------"
 print_sum "$DATA" "user"
@@ -260,8 +244,3 @@ SUM->TOTAL:        2.5GB
 
 脚本使用 `reset` 参数让调用的计数单元置零，配合 watch 命令，即可查看流经 v2ray 的每秒实时流量速度：
 `watch ./traffic.sh reset`
-
-#### 更新历史
-
-- 2019-08-07 统计脚本识别科学计数法的输出情况
-- 2019-08-09 优化流量脚本，增加了 SUM->TOTAL 的累加项

@@ -1,22 +1,27 @@
 # Traffic Statistics
 
-V2ray includes a traffic stats service, but it's not enabled by default. Traffic are statisticed into two major class: `inbound` and `user`.
+V2Ray has a traffic recording feature that is not enabled by default. Traffic statistics are divided into three categories: `inbound`, `user` and `outbound` (4.26.0+).
 
-* `inbound` means each inbound service, they are identified by the `tag` attribute.
-* `user` is the `email` attrbute in vmess client settings, stats usage for each client. Note: clients in socks/shadowsocks/http are not counted.
+* `inbound` is the inbound statistics of each inbound in the configuration, and the inbound traffic needs to be recorded according to the `tag`.
+* `user` is the statistics in the user of the vmess protocol, and the user's `email` is the basis for statistics and distinction. Users in socks, shadowsocks, http and other protocols do not support being counted.
+* `outbound` refers to the statistics of each outbound outbound in the configuration. Newly added since 4.26.0, the outbound traffic needs to be recorded according to the `tag`.
 
 ## Configuration of Stats
 
 To enable traffic statistic, following items must present in configuraton
 
-1. `"stats":{}` must set
-2. `"api"` includes `StatsService`
-3. `"policy"`  switches attributes starting with stats must set to true
-4. clients settings must include email attribute
-5. a `dokodemo-door` protocol inbound, tag set to api for grpc connection, used for connection of the API 
-6. routing rules include an inboundTag:api -> outboundTag:api rule
+1. `"stats":{}` the existence of the object;
+2. The statistical switch in `"policy"` is true. The switch for global statistics is under `"system"`, and the switch for user statistics is under `"levels"`;
+3. Global statistics must have a tag in the corresponding inbound and outbound;
+4. User statistics must have email in `"clients"`;
 
-Note: `email`/`tag` stats data are generated is from the v2ray process you querys, client/server side won't exchange their data.  The email in client side has nothing to do with the one on server-side, even they use the same uuid. If you query on client process, the data is only abount the client process.
+To use api to query traffic, you need to ensure that the following configuration exists in the configuration:
+
+1. There is `StatsService` in the `"api"` configuration object;
+2. The entrance of the dedicated `dokodemo-door` protocol, the tag is api;
+3. There are inboundTag:api -> outboundTag:api rules in routing;
+
+Note: The statistical `email`/`tag` is the data of the current V2Ray process instance. For example, if statistics are performed on the server, the email written by the client has no meaning to the server; if the statistics are performed on the client, the output is the data of the client itself. .
 
 ## Configuration Example
 
@@ -38,7 +43,9 @@ Note: `email`/`tag` stats data are generated is from the v2ray process you query
         },
         "system": {
             "statsInboundUplink": true,
-            "statsInboundDownlink": true
+            "statsInboundDownlink": true,
+            "statsOutboundUplink": true,
+            "statsOutboundDownlink": true
         }
     },
     "inbounds": [
@@ -75,58 +82,57 @@ Note: `email`/`tag` stats data are generated is from the v2ray process you query
     ],
     "outbounds": [
         {
+            "tag": "direct",
             "protocol": "freedom",
             "settings": {}
         }
     ],
     "routing": {
-        "settings": {
-            "rules": [
-                {
-                    "inboundTag": [
-                        "api"
-                    ],
-                    "outboundTag": "api",
-                    "type": "field"
-                }
-            ]
-        },
-        "strategy": "rules"
+        "rules": [
+            {
+                "inboundTag": [
+                    "api"
+                ],
+                "outboundTag": "api",
+                "type": "field"
+            }
+        ],
+        "domainStrategy": "AsIs"
     }
 }
 ```
 
 ## Viewing the traffic stats data
 
-one of the functions in `v2ctl` program is to connect to API.  Run `v2ctl api -h` will show help text and example about them. The configured port of api tagged dokodemo, used here as `--server` argument.
+Viewing traffic information is one of the functions of `v2ctl`. Use `v2ctl api -h` to see query examples. The api dokodemo-door port set in the configuration is the port of the `--server` parameter.
 
 ```bash
-v2ctl api --server=127.0.0.1:10085 StatsService.QueryStats 'pattern: "" reset: false'
-v2ctl api --server=127.0.0.1:10085 StatsService.GetStats 'name: "inbound>>>statin>>>traffic>>>downlink" reset: false'
+v2ctl api --server=127.0.0.1:10085 StatsService.QueryStats'pattern: "" reset: false'
+v2ctl api --server=127.0.0.1:10085 StatsService.GetStats'name: "inbound>>>statin>>>traffic>>>downlink" reset: false'
 ```
 
-Note: if you are running v2ctl.exe in windows cmd, the quotes need to be repeated to be passed as program arguments.
+Note that if you are running in the CMD of Windows, the quotation marks inside should be handled specially:
 
 ```cmd
 v2ctl.exe api --server="127.0.0.1:10085" StatsService.GetStats "name: """"inbound>>>statin>>>traffic>>>downlink"""" reset: false"
 ```
 
-There are 2 APIs about traffic stats.
+There are two callable APIs:
 
-* `QueryStats` is used to query matched record,  with argument `pattern`and`reset`; empty pattern matches all records, while reset set them to zero after the query.
-* `GetStats` retrives a single record, accepting arguments: `name` and `reset`.  Follow the "name" in the result of QueryStats to construct the record. And, reset set the record value to zero.
+* `QueryStats` is used to query matching records. You can use the parameters `pattern` and `reset`; leave pattern blank to match all records; reset makes the value of the matched unit zero.
+* `GetStats` is used to record one of them. It accepts `name` and `reset`. The name can be constructed by referring to the output result of QueryStats. Reset makes the value of this unit zero.
 
 Example of output:
 
 ```text
-$ /usr/bin/v2ray/v2ctl api --server=127.0.0.1:10085 StatsService.GetStats 'name:"inbound>>>ws>>>traffic>>>uplink"'
+$ /usr/local/bin/v2ctl api --server=127.0.0.1:10085 StatsService.GetStats 'name:"inbound>>>ws>>>traffic>>>uplink"'
 stat: <
   name: "inbound>>>ws>>>traffic>>>uplink"
   value: 3350713
 >
 $
 $
-$ /usr/bin/v2ray/v2ctl api --server=127.0.0.1:10085 StatsService.QueryStats ''
+$ /usr/local/bin/v2ctl api --server=127.0.0.1:10085 StatsService.QueryStats ''
 stat: <
   name: "inbound>>>ws>>>traffic>>>uplink"
   value: 3350713
@@ -175,19 +181,19 @@ stat: <
 >
 ```
 
-As noted before, the `name` here can be used as `GetStats` parameter if one of the value is your concern. The unit of value is byte.
+The `name` in the result can be used as the `GetStats` API to query the value of a single counting unit. Please summarize the composition rule of the name by yourself. I will not discuss it in detail here; the counting unit of value is byte.
 
 ## Processing of Traffic Stats
 
-The configuration above is to open an interface for gRPC protocol. In addition to `v2ctl`, you can use any gRPC supported program to query the value. However, we are not going deep into the third-party applications since you may use `v2ctl` along with 'awk' to generate a holistic report. 
+The above configuration allows v2ray to open a query interface of the `grpc` protocol. In addition to using v2ctl, various programs that support the grpc protocol can be used to query the above values and perform additional processing (such as storage statistics, user billing, chart reports). However, this article will not go into depth. Now that there is a ready-made command line program for `v2ctl`, we can use a simple shell script awk tool to process it and generate enough readable reports.
 
-Save the following bash script as `traffic.sh`, set exec permission by `chmod 755 traffic.sh`. Change the `_APISERVER` line if you use different dokodemo-door port.
+Try to save the following script to `traffic.sh`, pay attention to use `chmod 755 traffic.sh` to grant execution permission. Pay attention to adjust and modify the connection specific port parameters in the line of `_APISERVER`.
 
 ```bash
 #!/bin/bash
 
 _APISERVER=127.0.0.1:10085
-_V2CTL=/usr/bin/v2ray/v2ctl
+_V2CTL=/usr/local/bin/v2ctl
 
 apidata () {
     local ARGS=
@@ -225,6 +231,9 @@ DATA=$(apidata $1)
 echo "------------Inbound----------"
 print_sum "$DATA" "inbound"
 echo "-----------------------------"
+echo "------------Outbound----------"
+print_sum "$DATA" "outbound"
+echo "-----------------------------"
 echo
 echo "-------------User------------"
 print_sum "$DATA" "user"
@@ -258,11 +267,12 @@ SUM->TOTAL:        2.5GB
 -----------------------------
 ```
 
-Setting `reset` argument to script reset values to zero on each call. Use together with command watch, you can view traffic speed going through v2ray in real time:
-
+The script uses the `reset` parameter to reset the called counting unit. With the watch command, you can view the real-time flow rate per second flowing through v2ray:
 `watch ./traffic.sh reset`
 
 #### Updates
 
 - 2019-08-07 Updated the stats script to process the output in Scientific notation
-- 2019-08-09 Optimized traffic statistics and added the SUM->TOTAL column
+- 2019-08-09 Optimize the traffic script and add the cumulative item of SUM->TOTAL
+- 2020-07-04 Added outbound traffic statistics
+- 2020-12-13 Fix v2ctl path, add outbound statistics in script

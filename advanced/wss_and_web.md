@@ -12,7 +12,7 @@
 
 这次 TLS 的配置将写入 Nginx/Caddy/Apache 配置中，由这些软件来监听 443 端口（443 比较常用，并非 443 不可），然后将流量转发到 V2Ray 的 WebSocket 所监听的内网端口（本例是 10000），V2Ray 服务器端不需要配置 TLS。
 
-#### 服务器 V2Ray 配置 
+#### 服务器 V2Ray 配置
 
 ```json
 {
@@ -25,7 +25,7 @@
         "clients": [
           {
             "id": "b831381d-6324-4d53-ad4f-8cda48b30811",
-            "alterId": 64
+            "alterId": 0
           }
         ]
       },
@@ -55,7 +55,7 @@ Nginx 配置和 Apache 配置中使用的是域名和证书使用 TLS 小节的�
 证书生成
 
 ```plain
-$ ~/.acme.sh/acme.sh --issue -d mydomain.me --webroot --keylength ec-256
+$ ~/.acme.sh/acme.sh --issue -d mydomain.me --webroot /path/to/webroot --keylength ec-256
 ```
 
 安装证书和密钥
@@ -106,6 +106,7 @@ server {
 
 ::: tip
   在配置之前请先检查当前安装的 Caddy 的版本，两者的配置格式并不完全兼容。推荐使用 Caddy v2。
+  注意 Caddy 在 v2.2.0-rc.1 版本以后修复了无法转发 WebSocket 的 bug，请使用以后的版本进行安装。
 :::
 
 ```plain
@@ -121,7 +122,7 @@ mydomain.me {
     }
     @v2ray_websocket {
         path /ray
-        header Connection *Upgrade*
+        header Connection Upgrade
         header Upgrade websocket
     }
     reverse_proxy @v2ray_websocket localhost:10000
