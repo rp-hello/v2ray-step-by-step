@@ -126,7 +126,7 @@ function i18nSidebar(locale) {
         'advanced/tcp_tls_shunt_proxy',
         'advanced/websocket',
         'advanced/wss_and_web',
-	'advanced/wss_and_browserforwarder',
+        'advanced/wss_and_browserforwarder',
         'advanced/h2',
         'advanced/h2_tls_web',
         'advanced/tls_routing_with_nginx',
@@ -167,6 +167,7 @@ function i18nSidebar(locale) {
 }
 
 module.exports = {
+  base: "/v2ray-step-by-step/",
   title: '新 V2Ray 白话文指南',
   description: 'Just playing around',
   locales: {
