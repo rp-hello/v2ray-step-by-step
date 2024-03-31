@@ -3,7 +3,7 @@
     "build": "vuepress build ."
   },
   "devDependencies": {
-    "vuepress": "^1.8.2",
-    "vuepress-plugin-mermaidjs": "^1.8.1"
+    "vuepress": "^1.9.10",
+    "vuepress-plugin-mermaidjs": "^1.9.1"
   }
 }
