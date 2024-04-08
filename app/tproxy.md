@@ -280,9 +280,9 @@ iptables -t mangle -A OUTPUT -j V2RAY_MASK
 
 # 新建 DIVERT 规则，避免已有连接的包二次通过 TPROXY，理论上有一定的性能提升
 iptables -t mangle -N DIVERT
-iptables -t mangle -A DIVERT -j MARK --set-xmark 0x1/0x3
+iptables -t mangle -A DIVERT -j MARK --set-mark 0x1/0x3
 iptables -t mangle -A DIVERT -j ACCEPT
-iptables -t mangle -I PREROUTING -p tcp -m socket -j DIVERT
+iptables -t mangle -I PREROUTING -p tcp -m socket --transparent -j DIVERT
 ```
 
 执行了以上 ip 和 iptables 命令后，局域网同网段的设备以及网关本身就可以直接翻墙了。
