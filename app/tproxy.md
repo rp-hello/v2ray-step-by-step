@@ -236,7 +236,7 @@
 
 执行下面的命令开启透明代理。由于使用了 TPROXY 方式的透明代理，所以 TCP 流量也是使用 mangle 表。以下命令中，以 `#` 开头的为注释。
 
-```plain
+```shell
 # 设置策略路由
 ip rule add fwmark 0x1/0x3 table 100
 ip route add local 0.0.0.0/0 dev lo table 100
@@ -294,7 +294,7 @@ iptables -t mangle -I PREROUTING -p tcp -m socket --transparent -j DIVERT
 ```
 然后我们从这两个观点很容易得出一个推论：**无法在提供透明代理的本机(即本例中的网关)上对 UDP 透明代理**。
 这个结论好像并没有什么问题，对吧？但实际上，在本例的配置中无论是 TCP 还是 UDP，都可以实现在本机上的透明代理，而且都是用 TPROXY。那好像又跟前面的结论矛盾了？其实关键在于这三句命令：
-```
+```shell
 iptables -t mangle -A V2RAY_MASK -p udp -j MARK --set-mark 0x1/0x3
 iptables -t mangle -A V2RAY_MASK -p tcp -j MARK --set-mark 0x1/0x3
 iptables -t mangle -A OUTPUT -j V2RAY_MASK
@@ -307,7 +307,7 @@ nftables 与 iptables 同样基于 netfilter 框架，早在 2014 年就引入 L
 
 以下是 nftables 规则语句，本质与 iptables 没什么差别。
 
-``` plain
+``` shell
 # 设置策略路由
 ip rule add fwmark 1 table 100 
 ip route add local 0.0.0.0/0 dev lo table 100
